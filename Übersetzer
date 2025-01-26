@@ -1,0 +1,26 @@
+import deepl
+import pandas as pd
+
+# DeepL API-Authentifizierungsschlüssel
+auth_key = 'Ihr_DeepL_API_Schlüssel'
+translator = deepl.Translator(auth_key)
+
+# Excel-Datei laden
+df = pd.read_excel('Ihre_Datei.xlsx')
+
+# Liste der zu übersetzenden Spalten
+text_columns = ['Spalte1', 'Spalte2', 'Spalte3']
+
+# Funktion zur Übersetzung von Texten
+def translate_text(text):
+    if pd.isna(text):
+        return text
+    result = translator.translate_text(text, target_lang='DE')
+    return result.text
+
+# Übersetzung anwenden
+for column in text_columns:
+    df[column] = df[column].apply(translate_text)
+
+# Übersetzte Datei speichern
+df.to_excel('Übersetzte_Datei.xlsx', index=False)
