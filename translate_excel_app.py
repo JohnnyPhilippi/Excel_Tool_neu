@@ -1,41 +1,57 @@
 import streamlit as st
 import pandas as pd
+import io
 from deep_translator import GoogleTranslator
 
-def translate_text(text):
-    if isinstance(text, str):  # Sicherstellen, dass es sich um einen String handelt
-        return GoogleTranslator(source='en', target='de').translate(text)
-    return text
-
 # Titel der Anwendung
-st.title("Excel-Spaltenübersetzer")
+st.title("🌍 Excel-Spaltenübersetzer")
 
-# Hochladen der Excel-Datei
-uploaded_file = st.file_uploader("Lade eine Excel-Datei hoch", type=["xlsx"])
+# Benutzerdefinierte Spracheingabe
+st.sidebar.header("🔧 Spracheinstellungen")
+source_lang = st.sidebar.text_input("Quellsprache (z. B. 'en')", "en")
+target_lang = st.sidebar.text_input("Zielsprache (z. B. 'de')", "de")
 
-if uploaded_file is not None:
+# Datei-Upload
+uploaded_file = st.file_uploader("📂 Lade eine Excel-Datei hoch", type=["xlsx"])
+
+if uploaded_file:
     df = pd.read_excel(uploaded_file)
-    st.write("Dateivorschau:", df.head())
+    st.write("📊 **Dateivorschau:**", df.head())
 
-    # Auswahl der Spalten zur Übersetzung
-    columns_to_translate = st.multiselect(
-        "Wähle die Spalten zur Übersetzung aus", df.columns
-    )
+    # Auswahl der zu übersetzenden Spalten
+    columns_to_translate = st.multiselect("📝 Wähle die Spalten zur Übersetzung aus:", df.columns)
 
-    if st.button("Übersetzen"):
-        for column in columns_to_translate:
-            df[column] = df[column].apply(translate_text)
+    if st.button("🚀 Übersetzen"):
+        if not columns_to_translate:
+            st.warning("Bitte wähle mindestens eine Spalte zur Übersetzung aus.")
+        else:
+            with st.spinner("Übersetze... Bitte warten! ⏳"):
+                progress_bar = st.progress(0)
+                total_rows = len(df)
+                
+                # Übersetzung mit Fortschrittsanzeige
+                def translate_text(text):
+                    try:
+                        if isinstance(text, str):
+                            return GoogleTranslator(source=source_lang, target=target_lang).translate(text)
+                        return text
+                    except Exception as e:
+                        return f"Fehler: {e}"
 
-        st.success("Übersetzung abgeschlossen!")
+                for i, column in enumerate(columns_to_translate):
+                    df[column] = df[column].apply(translate_text)
+                    progress_bar.progress((i + 1) / len(columns_to_translate))
 
-        # Download der übersetzten Datei
-        output_file = "translated_file.xlsx"
-        df.to_excel(output_file, index=False)
+                st.success("✅ Übersetzung abgeschlossen!")
 
-        with open(output_file, "rb") as f:
-            st.download_button(
-                label="Lade die übersetzte Datei herunter",
-                data=f,
-                file_name="übersetzte_datei.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+                # Download-Option
+                output = io.BytesIO()
+                df.to_excel(output, index=False, engine='openpyxl')
+                output.seek(0)
+
+                st.download_button(
+                    label="📥 Lade die übersetzte Datei herunter",
+                    data=output,
+                    file_name="übersetzte_datei.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
